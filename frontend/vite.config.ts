@@ -24,6 +24,10 @@ export default defineConfig({
       output: {
         manualChunks: {
           'pdf-worker': ['pdfjs-dist/build/pdf.worker.mjs'],
+          'pdf-lib': ['pdfjs-dist'],
+          'react-vendor': ['react', 'react-dom', 'react-router-dom'],
+          'dnd-kit': ['@dnd-kit/core', '@dnd-kit/sortable', '@dnd-kit/utilities'],
+          'utils': ['date-fns', 'zustand'],
         },
       },
     },
