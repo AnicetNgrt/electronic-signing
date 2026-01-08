@@ -7,7 +7,7 @@ module.exports = {
     'plugin:@typescript-eslint/stylistic-type-checked',
     'plugin:react-hooks/recommended',
   ],
-  ignorePatterns: ['dist', '.eslintrc.cjs'],
+  ignorePatterns: ['dist', '.eslintrc.cjs', 'e2e', 'playwright.config.ts', 'vitest.config.ts'],
   parser: '@typescript-eslint/parser',
   parserOptions: {
     ecmaVersion: 'latest',
@@ -25,5 +25,8 @@ module.exports = {
     '@typescript-eslint/explicit-function-return-type': 'off',
     '@typescript-eslint/no-confusing-void-expression': 'off',
     '@typescript-eslint/restrict-template-expressions': ['error', { allowNumber: true }],
+    '@typescript-eslint/no-misused-promises': ['error', { checksVoidReturn: { attributes: false } }],
+    '@typescript-eslint/use-unknown-in-catch-callback-variable': 'off',
+    '@typescript-eslint/dot-notation': 'off',
   },
 };

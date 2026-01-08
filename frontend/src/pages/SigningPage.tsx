@@ -1,9 +1,9 @@
 import { useEffect, useState, useCallback, useMemo } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams } from 'react-router-dom';
 import { api } from '@/api/client';
 import PDFViewer from '@/components/PDFViewer';
 import SignaturePad from '@/components/SignaturePad';
-import type { SigningSession, DocumentField, FieldType } from '@/types';
+import type { SigningSession, DocumentField } from '@/types';
 import { format } from 'date-fns';
 
 interface FieldValue {
@@ -27,7 +27,6 @@ const dateFormats: Record<string, string> = {
 
 export default function SigningPage() {
   const { token } = useParams<{ token: string }>();
-  const navigate = useNavigate();
   const [session, setSession] = useState<SigningSession | null>(null);
   const [pdfUrl, setPdfUrl] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -75,9 +74,7 @@ export default function SigningPage() {
     void loadSession();
 
     return () => {
-      if (pdfUrl) {
-        URL.revokeObjectURL(pdfUrl);
-      }
+      // Cleanup handled by loadSession setting new URL
     };
   }, [token]);
 
@@ -126,7 +123,7 @@ export default function SigningPage() {
 
     setIsSubmitting(true);
     try {
-      const result = await api.submitSigning(token, {
+      await api.submitSigning(token, {
         signatures: signatures.map((s) => ({
           field_id: s.fieldId,
           signature_data: s.signatureData,

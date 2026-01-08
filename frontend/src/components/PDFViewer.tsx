@@ -79,15 +79,12 @@ export default function PDFViewer({
           });
         }
 
-        if (!cancelled) {
-          setPages(pageInfos);
-          setIsLoading(false);
-        }
+        setPages(pageInfos);
+        setIsLoading(false);
       } catch (err) {
-        if (!cancelled) {
-          setError(err instanceof Error ? err.message : 'Failed to load PDF');
-          setIsLoading(false);
-        }
+        if (cancelled) return;
+        setError(err instanceof Error ? err.message : 'Failed to load PDF');
+        setIsLoading(false);
       }
     };
 

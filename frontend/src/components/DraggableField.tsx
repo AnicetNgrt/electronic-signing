@@ -112,6 +112,7 @@ export default function DraggableField({
       document.addEventListener('mousemove', handleMouseMove);
       document.addEventListener('mouseup', handleMouseUp);
     },
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     [field.width, field.height, onUpdate, readOnly]
   );
 

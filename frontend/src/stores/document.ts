@@ -35,7 +35,7 @@ interface DocumentState {
   clearCurrentDocument: () => void;
 }
 
-export const useDocumentStore = create<DocumentState>((set, get) => ({
+export const useDocumentStore = create<DocumentState>((set) => ({
   documents: [],
   currentDocument: null,
   total: 0,

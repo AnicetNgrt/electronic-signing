@@ -4,7 +4,7 @@ import { useDocumentStore } from '@/stores/document';
 import { api } from '@/api/client';
 import PDFViewer from '@/components/PDFViewer';
 import DraggableField from '@/components/DraggableField';
-import type { FieldType, DocumentField, AuditLog, Certificate } from '@/types';
+import type { FieldType, AuditLog, Certificate } from '@/types';
 import { format } from 'date-fns';
 
 const fieldTypes: { type: FieldType; label: string; icon: string }[] = [
@@ -68,18 +68,20 @@ export default function DocumentEditorPage() {
   }, [id, fetchDocument, clearCurrentDocument]);
 
   useEffect(() => {
+    let currentUrl: string | null = null;
+
     if (currentDocument && id) {
       api
         .downloadDocument(id)
         .then((blob) => {
-          const url = URL.createObjectURL(blob);
-          setPdfUrl(url);
+          currentUrl = URL.createObjectURL(blob);
+          setPdfUrl(currentUrl);
         })
         .catch(console.error);
     }
     return () => {
-      if (pdfUrl) {
-        URL.revokeObjectURL(pdfUrl);
+      if (currentUrl) {
+        URL.revokeObjectURL(currentUrl);
       }
     };
   }, [currentDocument, id]);
