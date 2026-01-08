@@ -5,6 +5,18 @@ edition = "2021"
 authors = ["SignVault Team"]
 description = "Legally compliant electronic signature platform"
 
+[lib]
+name = "signvault"
+path = "src/lib.rs"
+
+[[bin]]
+name = "signvault"
+path = "src/main.rs"
+
+[lints.rust]
+dead_code = "allow"
+unused_variables = "allow"
+
 [dependencies]
 # Web framework
 axum = { version = "0.7", features = ["multipart", "macros"] }
@@ -33,7 +45,7 @@ base64 = "0.22"
 uuid = { version = "1", features = ["v4", "serde"] }
 
 # Email
-lettre = { version = "0.11", features = ["tokio1-rustls-tls", "smtp-transport", "builder"] }
+lettre = { version = "0.11", default-features = false, features = ["tokio1-rustls-tls", "smtp-transport", "builder", "hostname"] }
 
 # PDF processing
 lopdf = "0.32"

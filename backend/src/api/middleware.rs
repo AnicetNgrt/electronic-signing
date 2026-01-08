@@ -52,22 +52,23 @@ pub async fn auth_middleware(
 }
 
 pub fn extract_client_info(request: &Request) -> (String, String) {
-    let ip = request
-        .headers()
+    extract_client_info_from_headers(request.headers())
+}
+
+pub fn extract_client_info_from_headers(headers: &axum::http::HeaderMap) -> (String, String) {
+    let ip = headers
         .get("x-forwarded-for")
         .and_then(|h| h.to_str().ok())
         .map(|s| s.split(',').next().unwrap_or("unknown").trim().to_string())
         .or_else(|| {
-            request
-                .headers()
+            headers
                 .get("x-real-ip")
                 .and_then(|h| h.to_str().ok())
                 .map(|s| s.to_string())
         })
         .unwrap_or_else(|| "unknown".to_string());
 
-    let user_agent = request
-        .headers()
+    let user_agent = headers
         .get(header::USER_AGENT)
         .and_then(|h| h.to_str().ok())
         .unwrap_or("unknown")

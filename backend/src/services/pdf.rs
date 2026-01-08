@@ -25,9 +25,9 @@ pub fn get_pdf_metadata(path: &Path) -> Result<PdfMetadata> {
 
     let mut page_sizes = Vec::new();
 
-    for (page_num, _) in pages {
-        if let Ok(page_dict) = doc.get_page(page_num) {
-            let media_box = get_media_box(&doc, &page_dict);
+    for (_page_num, page_id) in pages {
+        if let Ok(Object::Dictionary(page_dict)) = doc.get_object(page_id) {
+            let media_box = get_media_box(&doc, page_dict);
             page_sizes.push(PageSize {
                 width: media_box.2 - media_box.0,
                 height: media_box.3 - media_box.1,
@@ -53,16 +53,14 @@ fn get_media_box(doc: &Document, page_dict: &lopdf::Dictionary) -> (f64, f64, f6
     }
 
     if let Ok(Object::Reference(parent_ref)) = page_dict.get(b"Parent") {
-        if let Ok(parent_obj) = doc.get_object(*parent_ref) {
-            if let Object::Dictionary(parent_dict) = parent_obj {
-                if let Ok(Object::Array(arr)) = parent_dict.get(b"MediaBox") {
-                    if arr.len() >= 4 {
-                        let x1 = get_number(&arr[0]).unwrap_or(0.0);
-                        let y1 = get_number(&arr[1]).unwrap_or(0.0);
-                        let x2 = get_number(&arr[2]).unwrap_or(612.0);
-                        let y2 = get_number(&arr[3]).unwrap_or(792.0);
-                        return (x1, y1, x2, y2);
-                    }
+        if let Ok(Object::Dictionary(parent_dict)) = doc.get_object(*parent_ref) {
+            if let Ok(Object::Array(arr)) = parent_dict.get(b"MediaBox") {
+                if arr.len() >= 4 {
+                    let x1 = get_number(&arr[0]).unwrap_or(0.0);
+                    let y1 = get_number(&arr[1]).unwrap_or(0.0);
+                    let x2 = get_number(&arr[2]).unwrap_or(612.0);
+                    let y2 = get_number(&arr[3]).unwrap_or(792.0);
+                    return (x1, y1, x2, y2);
                 }
             }
         }
@@ -74,7 +72,7 @@ fn get_media_box(doc: &Document, page_dict: &lopdf::Dictionary) -> (f64, f64, f6
 fn get_number(obj: &Object) -> Option<f64> {
     match obj {
         Object::Integer(n) => Some(*n as f64),
-        Object::Real(n) => Some(*n),
+        Object::Real(n) => Some(f64::from(*n)),
         _ => None,
     }
 }

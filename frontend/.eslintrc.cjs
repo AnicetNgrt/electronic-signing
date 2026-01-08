@@ -7,7 +7,7 @@ module.exports = {
     'plugin:@typescript-eslint/stylistic-type-checked',
     'plugin:react-hooks/recommended',
   ],
-  ignorePatterns: ['dist', '.eslintrc.cjs', 'e2e', 'playwright.config.ts', 'vitest.config.ts'],
+  ignorePatterns: ['dist', '.eslintrc.cjs', 'e2e', 'playwright.config.ts', 'vitest.config.ts', 'vite.config.d.ts'],
   parser: '@typescript-eslint/parser',
   parserOptions: {
     ecmaVersion: 'latest',

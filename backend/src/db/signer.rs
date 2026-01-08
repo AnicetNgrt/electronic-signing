@@ -84,11 +84,7 @@ pub async fn get_signers_by_document(pool: &PgPool, document_id: Uuid) -> Result
     Ok(signers)
 }
 
-pub async fn update_signer_status(
-    pool: &PgPool,
-    id: Uuid,
-    status: SignerStatus,
-) -> Result<Signer> {
+pub async fn update_signer_status(pool: &PgPool, id: Uuid, status: SignerStatus) -> Result<Signer> {
     let signer = sqlx::query_as::<_, Signer>(
         r#"
         UPDATE signers
@@ -157,11 +153,7 @@ pub async fn mark_signer_signed(
     Ok(signer)
 }
 
-pub async fn mark_signer_declined(
-    pool: &PgPool,
-    id: Uuid,
-    reason: Option<&str>,
-) -> Result<Signer> {
+pub async fn mark_signer_declined(pool: &PgPool, id: Uuid, reason: Option<&str>) -> Result<Signer> {
     let signer = sqlx::query_as::<_, Signer>(
         r#"
         UPDATE signers
@@ -217,12 +209,11 @@ pub async fn count_signers_by_document(pool: &PgPool, document_id: Uuid) -> Resu
 }
 
 pub async fn count_signed_by_document(pool: &PgPool, document_id: Uuid) -> Result<i64> {
-    let count: (i64,) = sqlx::query_as(
-        "SELECT COUNT(*) FROM signers WHERE document_id = $1 AND status = 'signed'",
-    )
-    .bind(document_id)
-    .fetch_one(pool)
-    .await?;
+    let count: (i64,) =
+        sqlx::query_as("SELECT COUNT(*) FROM signers WHERE document_id = $1 AND status = 'signed'")
+            .bind(document_id)
+            .fetch_one(pool)
+            .await?;
 
     Ok(count.0)
 }

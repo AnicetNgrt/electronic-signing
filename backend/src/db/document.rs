@@ -196,7 +196,7 @@ pub async fn add_field(
         "#,
     )
     .bind(document_id)
-    .bind(&req.field_type)
+    .bind(req.field_type)
     .bind(req.page)
     .bind(req.x)
     .bind(req.y)

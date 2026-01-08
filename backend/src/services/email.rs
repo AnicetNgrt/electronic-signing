@@ -49,7 +49,10 @@ impl EmailService {
     ) -> Result<()> {
         let signing_url = format!("{}/sign/{}", self.public_url, access_token);
 
-        let subject = format!("{} has requested your signature on \"{}\"", sender_name, document_title);
+        let subject = format!(
+            "{} has requested your signature on \"{}\"",
+            sender_name, document_title
+        );
 
         let html_body = format!(
             r#"<!DOCTYPE html>

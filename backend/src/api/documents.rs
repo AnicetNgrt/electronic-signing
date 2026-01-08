@@ -1,5 +1,5 @@
 use axum::{
-    extract::{Multipart, Path, Query, Request, State},
+    extract::{Multipart, Path, Query, State},
     Extension, Json,
 };
 use serde::{Deserialize, Serialize};
@@ -11,7 +11,7 @@ use uuid::Uuid;
 use validator::Validate;
 
 use crate::api::error::{ApiError, ApiResult};
-use crate::api::middleware::{extract_client_info, AuthUser};
+use crate::api::middleware::{extract_client_info_from_headers, AuthUser};
 use crate::api::state::AppState;
 use crate::db;
 use crate::models::audit::AuditAction;
@@ -82,10 +82,10 @@ pub struct CreateDocumentForm {
 pub async fn create_document(
     State(state): State<AppState>,
     Extension(auth_user): Extension<AuthUser>,
-    request: Request,
+    headers: axum::http::HeaderMap,
     mut multipart: Multipart,
 ) -> ApiResult<Json<Document>> {
-    let (ip_address, user_agent) = extract_client_info(&request);
+    let (ip_address, user_agent) = extract_client_info_from_headers(&headers);
 
     let mut title: Option<String> = None;
     let mut self_sign_only = false;
@@ -122,10 +122,10 @@ pub async fn create_document(
 
                 let content_type = field.content_type().map(|s| s.to_string());
 
-                if content_type.as_deref() != Some("application/pdf") {
-                    if !filename.to_lowercase().ends_with(".pdf") {
-                        return Err(ApiError::BadRequest("File must be a PDF".to_string()));
-                    }
+                if content_type.as_deref() != Some("application/pdf")
+                    && !filename.to_lowercase().ends_with(".pdf")
+                {
+                    return Err(ApiError::BadRequest("File must be a PDF".to_string()));
                 }
 
                 let data = field
@@ -242,10 +242,10 @@ pub async fn add_field(
     State(state): State<AppState>,
     Extension(auth_user): Extension<AuthUser>,
     Path(id): Path<Uuid>,
-    request: Request,
+    headers: axum::http::HeaderMap,
     Json(req): Json<AddFieldRequest>,
 ) -> ApiResult<Json<DocumentFieldRow>> {
-    let (ip_address, user_agent) = extract_client_info(&request);
+    let (ip_address, user_agent) = extract_client_info_from_headers(&headers);
 
     let document = db::document::get_document_by_id(&state.pool, id)
         .await?
@@ -286,10 +286,10 @@ pub async fn update_field(
     State(state): State<AppState>,
     Extension(auth_user): Extension<AuthUser>,
     Path((doc_id, field_id)): Path<(Uuid, Uuid)>,
-    request: Request,
+    headers: axum::http::HeaderMap,
     Json(req): Json<UpdateFieldRequest>,
 ) -> ApiResult<Json<DocumentFieldRow>> {
-    let (ip_address, user_agent) = extract_client_info(&request);
+    let (ip_address, user_agent) = extract_client_info_from_headers(&headers);
 
     let document = db::document::get_document_by_id(&state.pool, doc_id)
         .await?
@@ -336,9 +336,9 @@ pub async fn delete_field(
     State(state): State<AppState>,
     Extension(auth_user): Extension<AuthUser>,
     Path((doc_id, field_id)): Path<(Uuid, Uuid)>,
-    request: Request,
+    headers: axum::http::HeaderMap,
 ) -> ApiResult<Json<serde_json::Value>> {
-    let (ip_address, user_agent) = extract_client_info(&request);
+    let (ip_address, user_agent) = extract_client_info_from_headers(&headers);
 
     let document = db::document::get_document_by_id(&state.pool, doc_id)
         .await?
@@ -385,10 +385,10 @@ pub async fn add_signer(
     State(state): State<AppState>,
     Extension(auth_user): Extension<AuthUser>,
     Path(id): Path<Uuid>,
-    request: Request,
+    headers: axum::http::HeaderMap,
     Json(req): Json<AddSignerRequest>,
 ) -> ApiResult<Json<Signer>> {
-    let (ip_address, user_agent) = extract_client_info(&request);
+    let (ip_address, user_agent) = extract_client_info_from_headers(&headers);
 
     req.validate()
         .map_err(|e| ApiError::Validation(e.to_string()))?;
@@ -414,9 +414,7 @@ pub async fn add_signer(
     }
 
     let existing_signers = db::signer::get_signers_by_document(&state.pool, id).await?;
-    let order_index = req
-        .order_index
-        .unwrap_or(existing_signers.len() as i32);
+    let order_index = req.order_index.unwrap_or(existing_signers.len() as i32);
 
     let access_token = crypto::generate_access_token();
 
@@ -455,9 +453,9 @@ pub async fn remove_signer(
     State(state): State<AppState>,
     Extension(auth_user): Extension<AuthUser>,
     Path((doc_id, signer_id)): Path<(Uuid, Uuid)>,
-    request: Request,
+    headers: axum::http::HeaderMap,
 ) -> ApiResult<Json<serde_json::Value>> {
-    let (ip_address, user_agent) = extract_client_info(&request);
+    let (ip_address, user_agent) = extract_client_info_from_headers(&headers);
 
     let document = db::document::get_document_by_id(&state.pool, doc_id)
         .await?
@@ -507,9 +505,9 @@ pub async fn send_document(
     State(state): State<AppState>,
     Extension(auth_user): Extension<AuthUser>,
     Path(id): Path<Uuid>,
-    request: Request,
+    headers: axum::http::HeaderMap,
 ) -> ApiResult<Json<Document>> {
-    let (ip_address, user_agent) = extract_client_info(&request);
+    let (ip_address, user_agent) = extract_client_info_from_headers(&headers);
 
     let document = db::document::get_document_by_id(&state.pool, id)
         .await?
@@ -548,9 +546,7 @@ pub async fn send_document(
                     &signer.access_token,
                 )
                 .await
-                .map_err(|e| {
-                    ApiError::Internal(anyhow::anyhow!("Failed to send email: {}", e))
-                })?;
+                .map_err(|e| ApiError::Internal(anyhow::anyhow!("Failed to send email: {}", e)))?;
 
             db::signer::mark_email_sent(&state.pool, signer.id).await?;
 
@@ -569,9 +565,7 @@ pub async fn send_document(
             .await?;
         }
     } else {
-        info!(
-            "Email service not configured. Signers would need manual access tokens."
-        );
+        info!("Email service not configured. Signers would need manual access tokens.");
         for signer in &signers {
             info!(
                 "Signing link for {}: {}/sign/{}",
@@ -580,8 +574,8 @@ pub async fn send_document(
         }
     }
 
-    let updated = db::document::update_document_status(&state.pool, id, DocumentStatus::Pending)
-        .await?;
+    let updated =
+        db::document::update_document_status(&state.pool, id, DocumentStatus::Pending).await?;
 
     audit::log_action(
         &state.pool,
@@ -604,9 +598,9 @@ pub async fn void_document(
     State(state): State<AppState>,
     Extension(auth_user): Extension<AuthUser>,
     Path(id): Path<Uuid>,
-    request: Request,
+    headers: axum::http::HeaderMap,
 ) -> ApiResult<Json<Document>> {
-    let (ip_address, user_agent) = extract_client_info(&request);
+    let (ip_address, user_agent) = extract_client_info_from_headers(&headers);
 
     let document = db::document::get_document_by_id(&state.pool, id)
         .await?
@@ -686,12 +680,12 @@ pub async fn download_document(
     State(state): State<AppState>,
     Extension(auth_user): Extension<AuthUser>,
     Path(id): Path<Uuid>,
-    request: Request,
+    headers: axum::http::HeaderMap,
 ) -> ApiResult<axum::response::Response> {
     use axum::body::Body;
     use axum::http::{header, Response};
 
-    let (ip_address, user_agent) = extract_client_info(&request);
+    let (ip_address, user_agent) = extract_client_info_from_headers(&headers);
 
     let document = db::document::get_document_by_id(&state.pool, id)
         .await?

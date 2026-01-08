@@ -1,13 +1,12 @@
 use axum::{
-    extract::State,
-    middleware::{self, Next},
+    middleware,
     routing::{delete, get, post, put},
     Router,
 };
 
 use crate::api::{auth, documents, middleware::auth_middleware, signing, state::AppState};
 
-pub fn create_routes() -> Router<AppState> {
+pub fn create_routes(state: AppState) -> Router {
     let public_routes = Router::new()
         .route("/health", get(health_check))
         .route("/auth/login", post(auth::login));
@@ -16,7 +15,10 @@ pub fn create_routes() -> Router<AppState> {
         .route("/sign/:token", get(signing::get_signing_session))
         .route("/sign/:token/pdf", get(signing::get_signing_pdf))
         .route("/sign/:token/submit", post(signing::submit_signing))
-        .route("/sign/:token/decline", post(signing::decline_signing_request));
+        .route(
+            "/sign/:token/decline",
+            post(signing::decline_signing_request),
+        );
 
     let protected_routes = Router::new()
         .route("/auth/me", get(auth::get_current_user))
@@ -41,22 +43,21 @@ pub fn create_routes() -> Router<AppState> {
         .route("/documents/:id/send", post(documents::send_document))
         .route("/documents/:id/void", post(documents::void_document))
         .route("/documents/:id/audit", get(documents::get_audit_logs))
-        .route("/documents/:id/certificate", get(documents::get_certificate))
+        .route(
+            "/documents/:id/certificate",
+            get(documents::get_certificate),
+        )
         .route("/documents/:id/download", get(documents::download_document))
-        .route_layer(middleware::from_fn(auth_layer));
+        .route_layer(middleware::from_fn_with_state(
+            state.clone(),
+            auth_middleware,
+        ));
 
     Router::new()
         .merge(public_routes)
         .merge(signing_routes)
         .merge(protected_routes)
-}
-
-async fn auth_layer(
-    State(state): State<AppState>,
-    request: axum::extract::Request,
-    next: Next,
-) -> Result<axum::response::Response, crate::api::error::ApiError> {
-    auth_middleware(State(state), request, next).await
+        .with_state(state)
 }
 
 async fn health_check() -> &'static str {

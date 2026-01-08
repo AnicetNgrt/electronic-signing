@@ -31,7 +31,11 @@ async fn login(client: &Client, email: &str, password: &str) -> String {
         .await
         .expect("Login request failed");
 
-    assert!(res.status().is_success(), "Login failed: {:?}", res.status());
+    assert!(
+        res.status().is_success(),
+        "Login failed: {:?}",
+        res.status()
+    );
 
     let body: serde_json::Value = res.json().await.expect("Failed to parse login response");
     body["token"]

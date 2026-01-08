@@ -43,11 +43,7 @@ struct ErrorResponse {
 impl IntoResponse for ApiError {
     fn into_response(self) -> Response {
         let (status, error_type, message) = match &self {
-            ApiError::Unauthorized => (
-                StatusCode::UNAUTHORIZED,
-                "unauthorized",
-                self.to_string(),
-            ),
+            ApiError::Unauthorized => (StatusCode::UNAUTHORIZED, "unauthorized", self.to_string()),
             ApiError::Forbidden => (StatusCode::FORBIDDEN, "forbidden", self.to_string()),
             ApiError::NotFound(msg) => (StatusCode::NOT_FOUND, "not_found", msg.clone()),
             ApiError::BadRequest(msg) => (StatusCode::BAD_REQUEST, "bad_request", msg.clone()),

@@ -9,6 +9,7 @@ use crate::models::audit::{
 };
 use crate::services::crypto;
 
+#[allow(clippy::too_many_arguments)]
 pub async fn log_action(
     pool: &PgPool,
     document_id: Uuid,
@@ -77,7 +78,10 @@ pub async fn generate_certificate(pool: &PgPool, document_id: Uuid) -> Result<Ce
                 name: s.name.clone(),
                 email: s.email.clone(),
                 signed_at: s.signed_at.unwrap(),
-                ip_address: s.ip_address.clone().unwrap_or_else(|| "Unknown".to_string()),
+                ip_address: s
+                    .ip_address
+                    .clone()
+                    .unwrap_or_else(|| "Unknown".to_string()),
                 signature_hash: sig_hash,
             }
         })

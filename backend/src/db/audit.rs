@@ -4,6 +4,7 @@ use uuid::Uuid;
 
 use crate::models::audit::{AuditAction, AuditLog};
 
+#[allow(clippy::too_many_arguments)]
 pub async fn create_audit_log(
     pool: &PgPool,
     document_id: Uuid,

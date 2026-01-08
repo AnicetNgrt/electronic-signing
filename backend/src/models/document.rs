@@ -35,7 +35,11 @@ pub struct Document {
 
 #[derive(Debug, Deserialize, Validate)]
 pub struct CreateDocumentRequest {
-    #[validate(length(min = 1, max = 255, message = "Title must be between 1 and 255 characters"))]
+    #[validate(length(
+        min = 1,
+        max = 255,
+        message = "Title must be between 1 and 255 characters"
+    ))]
     pub title: String,
     pub self_sign_only: bool,
     pub expires_at: Option<DateTime<Utc>>,
@@ -43,7 +47,11 @@ pub struct CreateDocumentRequest {
 
 #[derive(Debug, Deserialize, Validate)]
 pub struct UpdateDocumentRequest {
-    #[validate(length(min = 1, max = 255, message = "Title must be between 1 and 255 characters"))]
+    #[validate(length(
+        min = 1,
+        max = 255,
+        message = "Title must be between 1 and 255 characters"
+    ))]
     pub title: Option<String>,
     pub expires_at: Option<DateTime<Utc>>,
 }

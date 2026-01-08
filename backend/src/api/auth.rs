@@ -20,8 +20,8 @@ pub async fn login(
         .await?
         .ok_or_else(|| ApiError::Unauthorized)?;
 
-    let valid = bcrypt::verify(&req.password, &user.password_hash)
-        .map_err(|_| ApiError::Unauthorized)?;
+    let valid =
+        bcrypt::verify(&req.password, &user.password_hash).map_err(|_| ApiError::Unauthorized)?;
 
     if !valid {
         return Err(ApiError::Unauthorized);

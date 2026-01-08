@@ -12,13 +12,9 @@ use tower_http::{
 use tracing::info;
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 
-mod api;
-mod db;
-mod models;
-mod services;
-mod utils;
-
-use crate::services::config::Config;
+use signvault::api;
+use signvault::services;
+use signvault::services::config::Config;
 
 #[tokio::main]
 async fn main() -> Result<()> {
@@ -63,17 +59,12 @@ async fn main() -> Result<()> {
             Method::DELETE,
             Method::OPTIONS,
         ])
-        .allow_headers([
-            header::CONTENT_TYPE,
-            header::AUTHORIZATION,
-            header::ACCEPT,
-        ]);
+        .allow_headers([header::CONTENT_TYPE, header::AUTHORIZATION, header::ACCEPT]);
 
     let app = Router::new()
-        .nest("/api", api::routes::create_routes())
+        .nest("/api", api::routes::create_routes(app_state))
         .layer(TraceLayer::new_for_http())
-        .layer(cors)
-        .with_state(app_state);
+        .layer(cors);
 
     let addr: SocketAddr = format!("{}:{}", config.backend_host, config.backend_port)
         .parse()

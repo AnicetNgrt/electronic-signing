@@ -4,6 +4,7 @@ use uuid::Uuid;
 
 use crate::models::signature::Signature;
 
+#[allow(clippy::too_many_arguments)]
 pub async fn create_signature(
     pool: &PgPool,
     signer_id: Uuid,
@@ -34,7 +35,10 @@ pub async fn create_signature(
     Ok(sig)
 }
 
-pub async fn get_signatures_by_document(pool: &PgPool, document_id: Uuid) -> Result<Vec<Signature>> {
+pub async fn get_signatures_by_document(
+    pool: &PgPool,
+    document_id: Uuid,
+) -> Result<Vec<Signature>> {
     let sigs = sqlx::query_as::<_, Signature>(
         r#"
         SELECT id, signer_id, document_id, field_id, signature_data, signature_hash, ip_address, user_agent, created_at

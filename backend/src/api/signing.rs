@@ -9,7 +9,7 @@ use tokio::fs;
 use uuid::Uuid;
 
 use crate::api::error::{ApiError, ApiResult};
-use crate::api::middleware::extract_client_info;
+use crate::api::middleware::{extract_client_info, extract_client_info_from_headers};
 use crate::api::state::AppState;
 use crate::db;
 use crate::models::audit::AuditAction;
@@ -51,11 +51,15 @@ pub async fn get_signing_session(
         .ok_or_else(|| ApiError::NotFound("Document not found".to_string()))?;
 
     if document.status == DocumentStatus::Voided {
-        return Err(ApiError::BadRequest("This document has been voided".to_string()));
+        return Err(ApiError::BadRequest(
+            "This document has been voided".to_string(),
+        ));
     }
 
     if document.status == DocumentStatus::Expired {
-        return Err(ApiError::BadRequest("This document has expired".to_string()));
+        return Err(ApiError::BadRequest(
+            "This document has expired".to_string(),
+        ));
     }
 
     if signer.status == SignerStatus::Signed {
@@ -95,8 +99,9 @@ pub async fn get_signing_session(
         .filter(|f| f.signer_id.is_none() || f.signer_id == Some(signer.id))
         .collect();
 
-    let metadata = crate::services::pdf::get_pdf_metadata(std::path::Path::new(&document.file_path))
-        .map_err(|e| ApiError::Internal(anyhow::anyhow!("Failed to read PDF: {}", e)))?;
+    let metadata =
+        crate::services::pdf::get_pdf_metadata(std::path::Path::new(&document.file_path))
+            .map_err(|e| ApiError::Internal(anyhow::anyhow!("Failed to read PDF: {}", e)))?;
 
     Ok(Json(SigningSession {
         document_id: document.id,
@@ -159,10 +164,10 @@ pub async fn get_signing_pdf(
 pub async fn submit_signing(
     State(state): State<AppState>,
     Path(token): Path<String>,
-    request: Request,
+    headers: axum::http::HeaderMap,
     Json(req): Json<CompleteSigningRequest>,
 ) -> ApiResult<Json<serde_json::Value>> {
-    let (ip_address, user_agent) = extract_client_info(&request);
+    let (ip_address, user_agent) = extract_client_info_from_headers(&headers);
 
     let signer = db::signer::get_signer_by_access_token(&state.pool, &token)
         .await?
@@ -177,7 +182,9 @@ pub async fn submit_signing(
     }
 
     if document.status == DocumentStatus::Completed {
-        return Err(ApiError::BadRequest("Document already completed".to_string()));
+        return Err(ApiError::BadRequest(
+            "Document already completed".to_string(),
+        ));
     }
 
     let ctx = signing::SigningContext {
@@ -224,10 +231,10 @@ pub async fn submit_signing(
 pub async fn decline_signing_request(
     State(state): State<AppState>,
     Path(token): Path<String>,
-    request: Request,
+    headers: axum::http::HeaderMap,
     Json(req): Json<DeclineRequest>,
 ) -> ApiResult<Json<serde_json::Value>> {
-    let (ip_address, user_agent) = extract_client_info(&request);
+    let (ip_address, user_agent) = extract_client_info_from_headers(&headers);
 
     let signer = db::signer::get_signer_by_access_token(&state.pool, &token)
         .await?
