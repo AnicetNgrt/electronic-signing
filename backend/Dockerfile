@@ -22,9 +22,13 @@ RUN rm -rf src
 # Copy source code
 COPY src ./src
 COPY migrations ./migrations
+COPY .sqlx ./.sqlx
+
+# Enable SQLx offline mode for Docker builds
+ENV SQLX_OFFLINE=true
 
 # Build the application
-RUN touch src/main.rs && cargo build --release
+RUN touch src/main.rs && touch src/lib.rs && cargo build --release
 
 # Runtime stage
 FROM debian:bookworm-slim
