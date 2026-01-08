@@ -1,0 +1,77 @@
+version: '3.8'
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: signvault-postgres
+    environment:
+      POSTGRES_USER: ${POSTGRES_USER:-signvault}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-signvault_secret}
+      POSTGRES_DB: ${POSTGRES_DB:-signvault}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-signvault}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: signvault-backend
+    environment:
+      DATABASE_URL: postgres://${POSTGRES_USER:-signvault}:${POSTGRES_PASSWORD:-signvault_secret}@postgres:5432/${POSTGRES_DB:-signvault}
+      BACKEND_HOST: 0.0.0.0
+      BACKEND_PORT: 8080
+      JWT_SECRET: ${JWT_SECRET}
+      JWT_EXPIRATION_HOURS: ${JWT_EXPIRATION_HOURS:-24}
+      BCRYPT_COST: ${BCRYPT_COST:-12}
+      ADMIN_EMAIL: ${ADMIN_EMAIL:-admin@example.com}
+      ADMIN_PASSWORD: ${ADMIN_PASSWORD:-change-this-secure-password}
+      SMTP_HOST: ${SMTP_HOST:-}
+      SMTP_PORT: ${SMTP_PORT:-587}
+      SMTP_USERNAME: ${SMTP_USERNAME:-}
+      SMTP_PASSWORD: ${SMTP_PASSWORD:-}
+      SMTP_FROM_EMAIL: ${SMTP_FROM_EMAIL:-noreply@localhost}
+      SMTP_FROM_NAME: ${SMTP_FROM_NAME:-SignVault}
+      SMTP_TLS: ${SMTP_TLS:-true}
+      STORAGE_PATH: /app/data/storage
+      MAX_FILE_SIZE_MB: ${MAX_FILE_SIZE_MB:-50}
+      HASH_ALGORITHM: ${HASH_ALGORITHM:-SHA256}
+      PUBLIC_URL: ${PUBLIC_URL:-http://localhost}
+      RUST_LOG: ${RUST_LOG:-info,signvault=debug}
+    volumes:
+      - storage_data:/app/data/storage
+    ports:
+      - "8080:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        VITE_API_URL: ${VITE_API_URL:-/api}
+    container_name: signvault-frontend
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
+    restart: unless-stopped
+
+volumes:
+  postgres_data:
+  storage_data:
