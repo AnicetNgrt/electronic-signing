@@ -1,14 +1,17 @@
 use axum::{
+    extract::State,
     middleware,
     routing::{delete, get, post, put},
-    Router,
+    Json, Router,
 };
+use serde::Serialize;
 
 use crate::api::{auth, documents, middleware::auth_middleware, signing, state::AppState};
 
 pub fn create_routes(state: AppState) -> Router {
     let public_routes = Router::new()
         .route("/health", get(health_check))
+        .route("/health/detailed", get(detailed_health_check))
         .route("/auth/login", post(auth::login));
 
     let signing_routes = Router::new()
@@ -62,4 +65,85 @@ pub fn create_routes(state: AppState) -> Router {
 
 async fn health_check() -> &'static str {
     "OK"
+}
+
+#[derive(Serialize)]
+struct HealthStatus {
+    status: String,
+    version: String,
+    database: DatabaseHealth,
+    storage: StorageHealth,
+}
+
+#[derive(Serialize)]
+struct DatabaseHealth {
+    connected: bool,
+    latency_ms: Option<u64>,
+    error: Option<String>,
+}
+
+#[derive(Serialize)]
+struct StorageHealth {
+    writable: bool,
+    path: String,
+    error: Option<String>,
+}
+
+async fn detailed_health_check(State(state): State<AppState>) -> Json<HealthStatus> {
+    // Check database connectivity
+    let db_start = std::time::Instant::now();
+    let db_result: Result<_, sqlx::Error> = sqlx::query("SELECT 1").execute(&state.pool).await;
+    let db_health = match db_result {
+        Ok(_) => DatabaseHealth {
+            connected: true,
+            latency_ms: Some(db_start.elapsed().as_millis() as u64),
+            error: None,
+        },
+        Err(e) => DatabaseHealth {
+            connected: false,
+            latency_ms: None,
+            error: Some(e.to_string()),
+        },
+    };
+
+    // Check storage directory
+    let storage_path = &state.config.storage_path;
+    let storage_health = if std::path::Path::new(storage_path).exists() {
+        // Try to write a test file
+        let test_file = format!("{}/.health_check", storage_path);
+        match std::fs::write(&test_file, "test") {
+            Ok(_) => {
+                let _ = std::fs::remove_file(&test_file);
+                StorageHealth {
+                    writable: true,
+                    path: storage_path.clone(),
+                    error: None,
+                }
+            }
+            Err(e) => StorageHealth {
+                writable: false,
+                path: storage_path.clone(),
+                error: Some(e.to_string()),
+            },
+        }
+    } else {
+        StorageHealth {
+            writable: false,
+            path: storage_path.clone(),
+            error: Some("Storage directory does not exist".to_string()),
+        }
+    };
+
+    let overall_status = if db_health.connected && storage_health.writable {
+        "healthy"
+    } else {
+        "unhealthy"
+    };
+
+    Json(HealthStatus {
+        status: overall_status.to_string(),
+        version: env!("CARGO_PKG_VERSION").to_string(),
+        database: db_health,
+        storage: storage_health,
+    })
 }
